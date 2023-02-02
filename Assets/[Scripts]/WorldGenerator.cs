@@ -2,33 +2,34 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.UIElements;
 
-public class WorldGenerator : MonoBehaviour
+public class WorldGenerator: MonoBehaviour
 {
-    [Header("Player Properties")] 
-    public GameObject playerPrefab;
+    [Header("Player References")]
+    public Transform player;
+    public Transform spawnPoint;
 
     [Header("World Properties")]
     [Range(8, 128)]
-    public int height = 1;
+    public int height = 8;
     [Range(8, 128)]
-    public int width = 1;
+    public int width = 8;
     [Range(8, 128)]
-    public int depth = 1;
+    public int depth = 8;
 
-    [Header("Scaling Values")] 
+    [Header("Scaling Values")]
+    [Range(8, 128)]
     public float min = 16.0f;
+    [Range(8, 128)]
     public float max = 24.0f;
 
-    [Header("Voxel Properties")] 
+    [Header("Tile Properties")]
     public Transform voxelParent;
     public GameObject voxel;
 
-    [Header("Grid")] 
+    [Header("Grid")]
     public List<GameObject> grid;
 
-    // starting values
     private int startHeight;
     private int startWidth;
     private int startDepth;
@@ -37,12 +38,9 @@ public class WorldGenerator : MonoBehaviour
 
     private Queue<GameObject> pool;
 
-
     // Start is called before the first frame update
     void Start()
     {
-        grid = new List<GameObject>(); // creates an empty container
-
         BuildPool();
         Generate();
     }
@@ -59,7 +57,7 @@ public class WorldGenerator : MonoBehaviour
     {
         pool = new Queue<GameObject>();
 
-        for (int i = 0; i < 80000; i++)
+        for (int i = 0; i < 20000; i++)
         {
             CreateTile();
         }
@@ -68,6 +66,7 @@ public class WorldGenerator : MonoBehaviour
     private GameObject GetTile(Vector3 position = new Vector3())
     {
         GameObject tile = null;
+        // check if there are enough tiles in the pool 
         if (pool.Count < 1)
         {
             CreateTile();
@@ -75,7 +74,6 @@ public class WorldGenerator : MonoBehaviour
 
         tile = pool.Dequeue();
         tile.SetActive(true);
-
         tile.transform.position = position;
         return tile;
     }
@@ -87,15 +85,6 @@ public class WorldGenerator : MonoBehaviour
         pool.Enqueue(tile);
     }
 
-    private void Generate()
-    {
-        Initialize();
-        Regenerate();
-        Invoke("RemoveInternalTiles", 0.1f);
-        Invoke("CombineMeshes", 0.2f);
-        Invoke("ResetMap", 0.3f);
-        PositionPlayer();
-    }
 
     // Update is called once per frame
     void Update()
@@ -105,28 +94,37 @@ public class WorldGenerator : MonoBehaviour
             Generate();
         }
 
-        if (Input.GetKey(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R))
         {
             Generate();
         }
     }
 
+    private void Generate()
+    {
+        Initialize();
+        ResetMap(); 
+
+        Invoke("Regenerate", 0.2f);
+        Invoke("RemoveInternalTiles", 0.3f); 
+        Invoke("CombineMeshes", 0.4f); 
+        
+        PositionPlayer();
+    }
+
     private void Initialize()
     {
         startHeight = height;
-        startWidth = width;
         startDepth = depth;
+        startWidth = width;
         startMin = min;
         startMax = max;
     }
 
     private void Regenerate()
     {
-        // generation
-
-        // perlin noise texture that we'll sample
-        float rand = Random.Range(min, max);
-
+        // world generation happens here
+        float randomScale = Random.Range(min, max);
         float offsetX = Random.Range(-1024.0f, 1024.0f);
         float offsetZ = Random.Range(-1024.0f, 1024.0f);
 
@@ -136,7 +134,7 @@ public class WorldGenerator : MonoBehaviour
             {
                 for (int x = 0; x < width; x++)
                 {
-                    var perlinValue = Mathf.PerlinNoise((x + offsetX) / rand, (z + offsetZ) / rand) * depth * 0.5f;
+                    var perlinValue = Mathf.PerlinNoise((x + offsetX) / randomScale, (z + offsetZ) / randomScale) * depth * 0.5f;
 
                     if (y < perlinValue)
                     {
@@ -148,15 +146,25 @@ public class WorldGenerator : MonoBehaviour
         }
     }
 
+    private void PositionPlayer()
+    {
+        player.gameObject.GetComponent<CharacterController>().enabled = false;
+        player.position = new Vector3(width * 0.5f, height + 5.0f, depth * 0.5f);
+        spawnPoint.position = player.position;
+        player.gameObject.GetComponent<CharacterController>().enabled = true;
+    }
+
     private void ResetMap()
     {
         var size = grid.Count;
+
         for (int i = 0; i < size; i++)
         {
             ReleaseTile(grid[i]);
         }
-
         grid.Clear();
+
+
     }
 
     private void RemoveInternalTiles()
@@ -169,8 +177,7 @@ public class WorldGenerator : MonoBehaviour
             int collisionCounter = 0;
             for (int i = 0; i < normalArray.Length; i++)
             {
-                if (Physics.Raycast(tile.transform.position, normalArray[i],
-                        tile.transform.localScale.magnitude * 0.3f))
+                if (Physics.Raycast(tile.transform.position, normalArray[i], tile.transform.localScale.magnitude * 0.3f))
                 {
                     collisionCounter++;
                 }
@@ -193,7 +200,7 @@ public class WorldGenerator : MonoBehaviour
             grid.Remove(tilesToBeRemoved[i]);
             ReleaseTile(tilesToBeRemoved[i]);
         }
-
+        tilesToBeRemoved.Clear();
     }
 
     private void CombineMeshes()
@@ -202,6 +209,7 @@ public class WorldGenerator : MonoBehaviour
         meshFilter.mesh = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
 
         List<MeshFilter> meshFilters = new List<MeshFilter>(); // all mesh filters from the tiles
+
         foreach (var tile in grid)
         {
             meshFilters.Add(tile.GetComponent<MeshFilter>());
@@ -221,10 +229,4 @@ public class WorldGenerator : MonoBehaviour
         voxelParent.GetComponent<MeshCollider>().sharedMesh = meshFilter.sharedMesh;
     }
 
-    private void PositionPlayer()
-    {
-        playerPrefab.GetComponent<CharacterController>().enabled = false;
-        playerPrefab.transform.position = new Vector3(width * 0.5f, height + 10.0f, depth * 0.5f);
-        playerPrefab.GetComponent<CharacterController>().enabled = true;
-    }
 }
