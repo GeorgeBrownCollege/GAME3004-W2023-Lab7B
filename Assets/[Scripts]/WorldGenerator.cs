@@ -57,7 +57,7 @@ public class WorldGenerator: MonoBehaviour
     {
         pool = new Queue<GameObject>();
 
-        for (int i = 0; i < 20000; i++)
+        for (int i = 0; i < 40000; i++)
         {
             CreateTile();
         }
@@ -138,7 +138,7 @@ public class WorldGenerator: MonoBehaviour
 
                     if (y < perlinValue)
                     {
-                        var tile = GetTile(new Vector3(x, y, z));
+                        var tile = GetTile(new Vector3(x, y * 0.1f, z));
                         grid.Add(tile);
                     }
                 }
