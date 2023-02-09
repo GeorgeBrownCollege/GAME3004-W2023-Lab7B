@@ -354,10 +354,25 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 3810507306940596312, guid: ee8d0fafc8c255443973e985edba5c30,
+        type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
     - target: {fileID: 5393582063538450894, guid: ee8d0fafc8c255443973e985edba5c30,
         type: 3}
       propertyPath: m_Name
       value: Start Tile
+      objectReference: {fileID: 0}
+    - target: {fileID: 5393582063538450894, guid: ee8d0fafc8c255443973e985edba5c30,
+        type: 3}
+      propertyPath: m_Layer
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 7108969433630035636, guid: ee8d0fafc8c255443973e985edba5c30,
+        type: 3}
+      propertyPath: m_Layer
+      value: 6
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
